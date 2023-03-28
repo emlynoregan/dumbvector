@@ -296,7 +296,7 @@ k = 10
 top_k_index = top_k_similar(dumb_index, query_embedding, k) # this is the semantic search
 
 docs_reader = get_docs_file_and_cache_reader("path/to/docs/folder")
-docs = docs_from_dumb_index(dumb_index, docs_reader, 0, k)
+docs = docs_from_dumb_index(top_k_index, docs_reader, 0, k)
 
 for ix, doc in enumerate(docs.get("doclist")):
     print(f"Result {ix}: {doc['text']}")
