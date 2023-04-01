@@ -5,7 +5,8 @@ import time
 start_time = time.time()
 
 import argparse
-from dumbvector.docs import file_docs_exists, make_docs_v1, get_docs_file_writer
+from dumbvector.docs import file_docs_exists, make_docs_v1, get_docs_file_writer, get_docs_file_reader
+from dumbvector.docs_s3 import get_docs_s3_file_writer, get_docs_s3_writer, s3_docs_exists
 from dumbvector.util import time_function
 # from openai.embeddings_utils import get_embedding
 import openai
@@ -48,16 +49,10 @@ def read_credentials():
         return json.load(f)
 
 @time_function
-def create_docs(filename, docs_path):
+def create_docs(filename, writer):
     # remove any path info from the filename
     docs_name = os.path.basename(filename)
     print (f'creating docs {docs_name} from file {filename}')
-
-    docs_exists = file_docs_exists(docs_name, docs_path)
-
-    if docs_exists:
-        print (f'{docs_name} already exists')
-        return
 
     # read the file (utf-8)
     print (f'reading {filename}')
@@ -94,8 +89,7 @@ def create_docs(filename, docs_path):
     d = make_docs_v1(docs_name, doclist)
 
     # write the Docs object to file
-    print (f'writing docs to file')
-    writer = get_docs_file_writer(docs_path)
+    print (f'writing docs...')
     writer(d)
 
 def main():
@@ -114,6 +108,20 @@ def main():
     # read the credentials
     credentials = read_credentials()
 
+    has_aws = 'aws_access_key_id' in credentials
+
+    if has_aws:
+        import boto3
+        boto3_session = boto3.Session(
+            aws_access_key_id=credentials['aws_access_key_id'],
+            aws_secret_access_key=credentials['aws_secret_access_key'],
+            region_name=credentials['region_name'],
+        )
+        s3_bucket = credentials['s3_bucket']
+        writer = get_docs_s3_file_writer(docs_path, boto3_session, s3_bucket, "openai_examples/docs")
+    else:
+        writer = get_docs_file_writer(docs_path)
+
     openai.api_key = credentials['openaikey']
 
     sourcepath_is_dir = os.path.isdir(source_path)
@@ -122,9 +130,20 @@ def main():
         # get all the files in the directory
         filenames = [os.path.join(source_path, f) for f in os.listdir(source_path)]
         for filename in filenames:
-            create_docs(filename, docs_path)
+            docs_name = os.path.basename(filename)
+            need_file_write = not file_docs_exists(docs_name, docs_path) # or (has_aws and not s3_docs_exists(boto3_session, s3_bucket, "openai_examples/docs", docs_name))
+            if need_file_write:
+                create_docs(filename, writer)
+            else:
+                print (f'{docs_name} already exists')
+                if has_aws:
+                    reader = get_docs_file_reader(docs_path)
+                    d = reader(docs_name)
+                    print (f"writing {docs_name} to s3")
+                    writer = get_docs_s3_writer(boto3_session, s3_bucket, "openai_examples/docs")
+                    writer(d)
     else:
-        create_docs(source_path, docs_path)
+        create_docs(source_path, writer)
 
     print ("done")
 
