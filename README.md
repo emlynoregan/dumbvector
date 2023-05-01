@@ -4,6 +4,13 @@ _Semantic Search done the dumb way._
 Dumb Vector is a python library implementing a really dumb brute force approach to semantic search. It's fast! It's simple! It's dumb!
 
 # Quickstart
+Install from pypi:
+
+``` bash
+pip install dumbvector
+```
+
+Now use it:
 ``` py
 from dumbvector.docs import make_docs_v1, get_docs_file_and_cache_reader, get_docs_file_and_cache_writer
 from dumbvector.index import create_dumb_index, docs_from_dumb_index
