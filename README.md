@@ -40,7 +40,7 @@ dumb_index = create_dumb_index(index_name, docs_list, f_get_vector_from_doc)
 
 # Search
 query = "hello"
-query_embedding = get_embedding(query)
+query_embedding = get_embedding(query, model="text-embedding-ada-002")
 k = 2
 
 result_index = top_k_similar(dumb_index, query_embedding, k)
